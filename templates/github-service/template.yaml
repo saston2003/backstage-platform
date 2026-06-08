@@ -1,0 +1,44 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: github-service
+  title: Create GitHub Service
+  description: Create a new GitHub repository and register it
+
+spec:
+  owner: platform-team
+  type: service
+
+  parameters:
+    - title: Service Details
+      required:
+        - name
+      properties:
+        name:
+          title: Repository Name
+          type: string
+          description: e.g. app-orders-api
+
+  steps:
+    - id: fetch
+      name: Fetch Template
+      action: fetch:template
+      input:
+        url: ./template
+        values:
+          name: ${{ parameters.name }}
+          owner: platform-team
+
+    - id: publish
+      name: Create GitHub Repo
+      action: publish:github
+      input:
+        repoUrl: github.com?owner=saston2003&repo=${{ parameters.name }}
+        defaultBranch: main
+
+    - id: register
+      name: Register in Backstage
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: /catalog-info.yaml
