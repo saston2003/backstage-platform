@@ -60,6 +60,11 @@ integrations:
     # - host: ghe.example.net
     #   apiBaseUrl: https://ghe.example.net/api/v3
     #   token: ${GHE_TOKEN}
+  azure:
+    - host: dev.azure.com
+      # Azure DevOps PAT used for repo and pipeline integrations
+      credentials:
+        - personalAccessToken: ${AZURE_DEVOPS_TOKEN}
 
 proxy:
   ### Example for how to add a proxy endpoint for the frontend.
@@ -120,7 +125,28 @@ catalog:
   rules:
     - allow: [Component, System, API, Resource, Location, Template, User, Group]
 
+  providers:
+    # Azure DevOps discovery provider currently disabled because Azure Search API returns 203.
+    # Re-enable once PAT has required scope for code search/list access.
+    # azureDevOps:
+    #   sastonDevOps:
+    #     organization: sastonz400
+    #     project: '*'
+    #     repository: '*'
+    #     path: /catalog-info.yaml
+    #     schedule:
+    #       frequency:
+    #         minutes: 30
+    #       timeout:
+    #         minutes: 5
+
   locations:
+    - type: file
+      target: ../../examples/azure-devops-demo.yaml
+
+    - type: file
+      target: ../../examples/azure-devops-showcase.yaml
+
     - type: file
       target: ../../examples/entities.yaml
 

@@ -1,0 +1,112 @@
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: azure-devops-demo
+  title: Azure DevOps PartsUnlimited Demo
+  description: Demo retail system represented in Azure DevOps, showing how Backstage can organize repos, boards, pipelines, APIs, and cloud resources.
+  tags: [azure-devops, demo, retail]
+  links:
+    - title: Azure DevOps Project
+      icon: dashboard
+      url: https://dev.azure.com/sastonz400/Agile%20Planning%20and%20Portfolio%20Management%20with%20Azure%20Boards
+    - title: Team Backlog
+      icon: dashboard
+      url: https://dev.azure.com/sastonz400/Agile%20Planning%20and%20Portfolio%20Management%20with%20Azure%20Boards/_backlogs
+spec:
+  owner: guests
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: partsunlimited-catalog-api
+  title: PartsUnlimited Catalog API
+  description: API surface exposed by the PartsUnlimited service for product catalog and inventory workflows.
+  tags: [azure-devops, openapi]
+spec:
+  type: openapi
+  lifecycle: production
+  owner: guests
+  system: azure-devops-demo
+  definition: |
+    openapi: 3.0.0
+    info:
+      title: PartsUnlimited Catalog API
+      version: 1.0.0
+    paths:
+      /products:
+        get:
+          summary: List products
+          responses:
+            '200':
+              description: Products returned
+      /inventory/{sku}:
+        get:
+          summary: Get inventory by SKU
+          parameters:
+            - name: sku
+              in: path
+              required: true
+              schema:
+                type: string
+          responses:
+            '200':
+              description: Inventory returned
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: partsunlimited-sql-db
+  title: PartsUnlimited SQL Database
+  description: Azure SQL database used by the PartsUnlimited sample application.
+  tags: [azure, sql, production]
+  links:
+    - title: Azure Portal Resource Group
+      icon: dashboard
+      url: https://portal.azure.com/
+spec:
+  type: database
+  owner: guests
+  system: azure-devops-demo
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: partsunlimited-service
+  title: PartsUnlimited Service
+  description: Retail sample service tracked in Azure DevOps. Developers use this Backstage page to find ownership, source, delivery pipeline, work items, API surface, and dependent Azure resources in one place.
+  tags: [azure-devops, dotnet, retail, service]
+  annotations:
+    backstage.io/source-location: url:https://dev.azure.com/sastonz400/Agile%20Planning%20and%20Portfolio%20Management%20with%20Azure%20Boards/_git/PartsUnlimited
+    backstage.io/view-url: https://dev.azure.com/sastonz400/Agile%20Planning%20and%20Portfolio%20Management%20with%20Azure%20Boards/_git/PartsUnlimited
+    backstage.io/edit-url: https://dev.azure.com/sastonz400/Agile%20Planning%20and%20Portfolio%20Management%20with%20Azure%20Boards/_git/PartsUnlimited?path=/catalog-info.yaml
+    backstage.io/techdocs-ref: dir:.
+  links:
+    - title: Azure Repo
+      icon: github
+      url: https://dev.azure.com/sastonz400/Agile%20Planning%20and%20Portfolio%20Management%20with%20Azure%20Boards/_git/PartsUnlimited
+    - title: Azure Boards
+      icon: dashboard
+      url: https://dev.azure.com/sastonz400/Agile%20Planning%20and%20Portfolio%20Management%20with%20Azure%20Boards/_boards
+    - title: Azure Pipelines
+      icon: dashboard
+      url: https://dev.azure.com/sastonz400/Agile%20Planning%20and%20Portfolio%20Management%20with%20Azure%20Boards/_build
+    - title: Azure Releases
+      icon: dashboard
+      url: https://dev.azure.com/sastonz400/Agile%20Planning%20and%20Portfolio%20Management%20with%20Azure%20Boards/_release
+    - title: Pull Requests
+      icon: dashboard
+      url: https://dev.azure.com/sastonz400/Agile%20Planning%20and%20Portfolio%20Management%20with%20Azure%20Boards/_git/PartsUnlimited/pullrequests
+    - title: Azure Portal
+      icon: dashboard
+      url: https://portal.azure.com/
+spec:
+  type: service
+  lifecycle: production
+  owner: guests
+  system: azure-devops-demo
+  providesApis: [partsunlimited-catalog-api]
+  dependsOn:
+    - resource:default/partsunlimited-sql-db

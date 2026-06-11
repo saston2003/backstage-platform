@@ -1,0 +1,12 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: my-test-service
+  description: A test service for Azure DevOps discovery
+  links:
+    - url: https://dev.azure.com/sastonz400/
+      title: Azure DevOps
+spec:
+  type: service
+  owner: "group:default/my-team"
+  lifecycle: experimental
