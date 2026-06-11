@@ -1,0 +1,22 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{ values.name }}
+  description: ${{ values.description }}
+  tags: [azure-devops, service]
+  annotations:
+    backstage.io/source-location: url:https://dev.azure.com/${{ values.organization }}/${{ values.project }}/_git/${{ values.name }}
+    dev.azure.com/host-org: dev.azure.com/${{ values.organization }}
+    dev.azure.com/project: ${{ values.project }}
+    dev.azure.com/project-repo: ${{ values.project }}/${{ values.name }}
+  links:
+    - title: Azure Repo
+      url: https://dev.azure.com/${{ values.organization }}/${{ values.project }}/_git/${{ values.name }}
+    - title: Azure Boards
+      url: https://dev.azure.com/${{ values.organization }}/${{ values.project }}/_boards
+    - title: Azure Pipelines
+      url: https://dev.azure.com/${{ values.organization }}/${{ values.project }}/_build
+spec:
+  type: service
+  lifecycle: experimental
+  owner: ${{ values.owner }}

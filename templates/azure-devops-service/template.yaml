@@ -1,0 +1,77 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: azure-devops-service
+  title: Create Azure DevOps Service
+  description: Start here when the repo does not exist yet. Backstage creates a new Azure DevOps repo, pushes starter code and a pipeline, then registers the new service in the catalog.
+  tags: [azure-devops, service, pipeline]
+spec:
+  owner: user:guest
+  type: service
+  parameters:
+    - title: Service Details
+      required:
+        - name
+        - description
+      properties:
+        name:
+          title: Service Name
+          type: string
+          description: Unique service name, used for the repo and catalog entity.
+          pattern: '^[a-z0-9-]+$'
+          ui:autofocus: true
+        description:
+          title: Description
+          type: string
+          default: Service created from Backstage and published to Azure DevOps.
+        owner:
+          title: Owner
+          type: string
+          default: guests
+    - title: Azure DevOps Target
+      required:
+        - organization
+        - project
+      properties:
+        organization:
+          title: Organization
+          type: string
+          default: sastonz400
+        project:
+          title: Project
+          type: string
+          default: Agile Planning and Portfolio Management with Azure Boards
+  steps:
+    - id: fetchBase
+      name: Fetch Starter Code
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.name }}
+          description: ${{ parameters.description }}
+          owner: ${{ parameters.owner }}
+          organization: ${{ parameters.organization }}
+          project: ${{ parameters.project }}
+
+    - id: publish
+      name: Create Azure DevOps Repo and Push Code
+      action: publish:azure
+      input:
+        repoUrl: 'dev.azure.com?organization=${{ parameters.organization }}&project=${{ parameters.project }}&repo=${{ parameters.name }}'
+        defaultBranch: main
+        description: ${{ parameters.description }}
+
+    - id: register
+      name: Register in Backstage Catalog
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: /catalog-info.yaml
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Open in catalog
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}
