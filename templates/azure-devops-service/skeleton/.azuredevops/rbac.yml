@@ -1,0 +1,23 @@
+apiVersion: platform.example.com/v1
+kind: AzureDevOpsRbac
+metadata:
+  service: ${{ values.name }}
+  standard: azure-devops-service-v1
+spec:
+  project: ${{ values.project }}
+  repository: ${{ values.name }}
+  ownerGroup: ${{ values.owner }}
+  environment: ${{ values.environment }}
+  requiredGroups:
+    - name: ${{ values.owner }}
+      role: contributor
+    - name: platform-team
+      role: administrator
+  branchPolicies:
+    main:
+      minimumApprovers: 1
+      requireBuildValidation: true
+      requiredPipelineTemplate: pipelines/standard-deploy.yml
+  protectedEnvironments:
+    - name: prod
+      requiredApproverGroup: platform-team

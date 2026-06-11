@@ -1,0 +1,22 @@
+parameters:
+  - name: serviceName
+    type: string
+  - name: environment
+    type: string
+    values:
+      - dev
+      - test
+      - prod
+  - name: ownerGroup
+    type: string
+
+steps:
+  - script: |
+      echo "Deploying {% raw %}${{ parameters.serviceName }}{% endraw %} to {% raw %}${{ parameters.environment }}{% endraw %}"
+      echo "Owner group: {% raw %}${{ parameters.ownerGroup }}{% endraw %}"
+    displayName: Standard platform deployment
+
+  - script: |
+      echo "Validating RBAC manifest"
+      test -f .azuredevops/rbac.yml
+    displayName: Verify required RBAC setup
