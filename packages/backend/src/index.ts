@@ -21,6 +21,7 @@ backend.add(
 
 // scaffolder plugin
 backend.add(import('@backstage/plugin-scaffolder-backend'));
+backend.add(import('./modules/scaffolderAzurePipeline'));
 backend.add(import('@backstage/plugin-scaffolder-backend-module-azure'));
 backend.add(import('@backstage/plugin-scaffolder-backend-module-github'));
 backend.add(
