@@ -2,8 +2,11 @@ app:
   title: Scaffolded Backstage App
   baseUrl: http://localhost:3000
 
-  # Enable all packages by default, this will discover packages from packages/app/package.json
-  packages: all
+  # Enable all packages by default, but load Azure DevOps through the local
+  # compatibility module in packages/app/src/modules/azure-devops.
+  packages:
+    exclude:
+      - '@backstage/plugin-azure-devops'
 
   extensions:
     # Configure the catalog index page to be the root page, this is normally mounted on /catalog
@@ -65,6 +68,10 @@ integrations:
       # Azure DevOps PAT used for repo and pipeline integrations
       credentials:
         - personalAccessToken: ${AZURE_DEVOPS_TOKEN}
+
+azureDevOps:
+  host: dev.azure.com
+  organization: sastonz400
 
 proxy:
   ### Example for how to add a proxy endpoint for the frontend.
@@ -141,6 +148,16 @@ catalog:
     #         minutes: 5
 
   locations:
+    - type: file
+      target: ../../templates/azure-devops-service/template.yaml
+      rules:
+        - allow: [Template]
+
+    - type: url
+      target: https://dev.azure.com/sastonz400/Agile%20Planning%20and%20Portfolio%20Management%20with%20Azure%20Boards/_git/mybackstagethingy?path=/catalog-info.yaml
+      rules:
+        - allow: [Component]
+
     - type: file
       target: ../../examples/azure-devops-demo.yaml
 
