@@ -1,0 +1,132 @@
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: commerce-platform
+  description: Customer-facing commerce workloads hosted in Azure.
+spec:
+  owner: guests
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: checkout-public-api
+  description: Public checkout API used by web and mobile channels.
+spec:
+  type: openapi
+  lifecycle: production
+  owner: guests
+  system: commerce-platform
+  definition: |
+    openapi: 3.0.0
+    info:
+      title: Checkout API
+      version: 1.0.0
+    paths:
+      /checkout:
+        post:
+          summary: Create checkout session
+          responses:
+            '200':
+              description: OK
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: checkout-service
+  description: Checkout microservice tracked in Azure DevOps.
+  tags: [azure-devops, payments, critical]
+  annotations:
+    backstage.io/source-location: url:https://dev.azure.com/sastonz400/Agile%20Planning%20and%20Portfolio%20Management%20with%20Azure%20Boards/_git/PartsUnlimited
+    backstage.io/view-url: https://dev.azure.com/sastonz400/Agile%20Planning%20and%20Portfolio%20Management%20with%20Azure%20Boards/_git/PartsUnlimited
+    backstage.io/edit-url: https://dev.azure.com/sastonz400/Agile%20Planning%20and%20Portfolio%20Management%20with%20Azure%20Boards/_git/PartsUnlimited?path=/catalog-info.yaml
+    dev.azure.com/host-org: dev.azure.com/sastonz400
+    dev.azure.com/project: Agile Planning and Portfolio Management with Azure Boards
+    dev.azure.com/project-repo: Agile Planning and Portfolio Management with Azure Boards/PartsUnlimited
+  links:
+    - title: Azure Repo
+      icon: github
+      url: https://dev.azure.com/sastonz400/Agile%20Planning%20and%20Portfolio%20Management%20with%20Azure%20Boards/_git/PartsUnlimited
+    - title: Azure Boards Sprint
+      icon: dashboard
+      url: https://dev.azure.com/sastonz400/Agile%20Planning%20and%20Portfolio%20Management%20with%20Azure%20Boards/_boards/board
+    - title: Azure Pipeline
+      icon: dashboard
+      url: https://dev.azure.com/sastonz400/Agile%20Planning%20and%20Portfolio%20Management%20with%20Azure%20Boards/_build
+    - title: Release Dashboard
+      icon: dashboard
+      url: https://dev.azure.com/sastonz400/Agile%20Planning%20and%20Portfolio%20Management%20with%20Azure%20Boards/_release
+spec:
+  type: service
+  lifecycle: production
+  owner: guests
+  system: commerce-platform
+  providesApis: [checkout-public-api]
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: storefront-web
+  description: Web frontend that consumes checkout and catalog APIs.
+  tags: [azure-devops, frontend]
+  annotations:
+    backstage.io/source-location: url:https://dev.azure.com/sastonz400/Agile%20Planning%20and%20Portfolio%20Management%20with%20Azure%20Boards/_git/PartsUnlimited
+    dev.azure.com/host-org: dev.azure.com/sastonz400
+    dev.azure.com/project: Agile Planning and Portfolio Management with Azure Boards
+    dev.azure.com/project-repo: Agile Planning and Portfolio Management with Azure Boards/PartsUnlimited
+  links:
+    - title: Azure Repo
+      url: https://dev.azure.com/sastonz400/Agile%20Planning%20and%20Portfolio%20Management%20with%20Azure%20Boards/_git/PartsUnlimited
+    - title: Bug Board
+      url: https://dev.azure.com/sastonz400/Agile%20Planning%20and%20Portfolio%20Management%20with%20Azure%20Boards/_boards/board
+spec:
+  type: website
+  lifecycle: production
+  owner: guests
+  system: commerce-platform
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: commerce-aks-cluster
+  description: Shared AKS cluster for commerce workloads.
+  tags: [azure, aks]
+spec:
+  type: kubernetes-cluster
+  owner: guests
+  system: commerce-platform
+
+---
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: register-azure-devops-repo
+  title: Register Existing Azure DevOps Repo
+  description: Use this when the repo already exists in Azure DevOps. Backstage reads its catalog-info.yaml and adds that existing service to the catalog.
+spec:
+  owner: user:guest
+  type: service
+  parameters:
+    - title: Azure DevOps Repository
+      required:
+        - repoCatalogUrl
+      properties:
+        repoCatalogUrl:
+          title: Catalog URL
+          type: string
+          description: Full URL to the existing repo's catalog-info.yaml file in Azure DevOps.
+          default: https://dev.azure.com/sastonz400/Agile%20Planning%20and%20Portfolio%20Management%20with%20Azure%20Boards/_git/PartsUnlimited?path=/catalog-info.yaml
+  steps:
+    - id: register
+      name: Register Azure DevOps Catalog File
+      action: catalog:register
+      input:
+        catalogInfoUrl: ${{ parameters.repoCatalogUrl }}
+  output:
+    links:
+      - title: Open registered entity
+        icon: catalog
+        entityRef: ${{ steps['register'].output.entityRef }}
