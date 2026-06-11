@@ -85,6 +85,17 @@ auth:
   providers:
     # See https://backstage.io/docs/auth/guest/provider
     guest: {}
+    microsoft:
+      development:
+        clientId: ${AZURE_CLIENT_ID}
+        clientSecret: ${AZURE_CLIENT_SECRET}
+        tenantId: ${AZURE_TENANT_ID}
+        # Optional: limit sign-in to a specific Azure AD group
+        # domainHint: your-company.com
+        signIn:
+          resolvers:
+            - resolver: emailMatchingUserEntityProfileEmail
+            - resolver: emailLocalPartMatchingUserEntityName
   # see https://backstage.io/docs/ai/mcp-actions#client-id-metadata-documents
   # to learn more about client id metadata documents
   experimentalClientIdMetadataDocuments:
