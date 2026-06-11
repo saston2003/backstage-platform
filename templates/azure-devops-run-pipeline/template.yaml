@@ -1,0 +1,51 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: run-azure-devops-pipeline
+  title: Run Azure DevOps Pipeline
+  description: Use this to trigger an existing Azure DevOps pipeline from Backstage, such as a build or deployment run.
+  tags: [azure-devops, pipeline, deployment]
+spec:
+  owner: user:guest
+  type: service
+  parameters:
+    - title: Pipeline Target
+      required:
+        - organization
+        - project
+        - pipelineId
+        - branch
+      properties:
+        organization:
+          title: Organization
+          type: string
+          default: sastonz400
+        project:
+          title: Project
+          type: string
+          default: Agile Planning and Portfolio Management with Azure Boards
+        pipelineId:
+          title: Pipeline ID
+          type: number
+          description: Numeric Azure DevOps pipeline ID to run. The demo pipeline for mybackstagethingy is 313.
+          default: 313
+        branch:
+          title: Branch
+          type: string
+          default: main
+  steps:
+    - id: runPipeline
+      name: Trigger Azure DevOps Pipeline
+      action: azure:pipeline:run
+      input:
+        organization: ${{ parameters.organization }}
+        project: ${{ parameters.project }}
+        pipelineId: ${{ parameters.pipelineId }}
+        branch: ${{ parameters.branch }}
+  output:
+    links:
+      - title: Open Azure DevOps pipeline run
+        url: ${{ steps.runPipeline.output.runUrl }}
+      - title: View service pipelines in Backstage
+        icon: catalog
+        url: /catalog/default/component/mybackstagethingy/pipelines
