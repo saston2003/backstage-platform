@@ -433,6 +433,7 @@ const createCreateAzurePipelineForGitHubAction = () =>
               repository: {
                 id: githubRepository,
                 name: githubRepository,
+                fullName: githubRepository,
                 type: 'github',
                 connection: {
                   id: serviceConnection.id,
@@ -465,6 +466,78 @@ const createCreateAzurePipelineForGitHubAction = () =>
     },
   });
 
+const createDeleteGitHubRepositoryAction = () =>
+  createTemplateAction({
+    id: 'github:repo:delete',
+    description: 'Deletes a GitHub repository',
+    schema: {
+      input: {
+        owner: z =>
+          z.string({
+            description: 'GitHub organization or user that owns the repository',
+          }),
+        repo: z =>
+          z.string({
+            description: 'GitHub repository name to delete',
+          }),
+        confirmRepoName: z =>
+          z.string({
+            description: 'Repository name confirmation',
+          }),
+      },
+      output: {
+        deleted: z => z.boolean().describe('Whether the repository was deleted'),
+        repositoryUrl: z => z.string().describe('Deleted repository URL'),
+      },
+    },
+    async handler(ctx) {
+      const { owner, repo, confirmRepoName } = ctx.input;
+      if (repo !== confirmRepoName) {
+        throw new Error(
+          `Repository confirmation did not match. Expected '${repo}'.`,
+        );
+      }
+
+      const token = process.env.GITHUB_TOKEN;
+      if (!token) {
+        throw new Error('GITHUB_TOKEN is not configured');
+      }
+
+      const repositoryUrl = `https://github.com/${owner}/${repo}`;
+      ctx.logger.info(`Deleting GitHub repository ${owner}/${repo}`);
+
+      const response = await fetch(
+        `https://api.github.com/repos/${encodeURIComponent(
+          owner,
+        )}/${encodeURIComponent(repo)}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28',
+          },
+        },
+      );
+
+      if (response.status !== 204) {
+        const responseText = await response.text();
+        if (response.status === 403) {
+          throw new Error(
+            `GitHub repository deletion failed with 403. The GITHUB_TOKEN used by Backstage must have admin access to ${owner}/${repo} and deletion permission. For a classic GitHub PAT, add the delete_repo scope. For a fine-grained token, grant repository Administration read/write permission. GitHub response: ${responseText.slice(0, 500)}`,
+          );
+        }
+        throw new Error(
+          `GitHub repository deletion failed with ${response.status}: ${responseText.slice(0, 500)}`,
+        );
+      }
+
+      ctx.output('deleted', true);
+      ctx.output('repositoryUrl', repositoryUrl);
+      ctx.logger.info(`Deleted GitHub repository ${owner}/${repo}`);
+    },
+  });
+
 export default createBackendModule({
   pluginId: 'scaffolder',
   moduleId: 'azure-pipeline-runner',
@@ -478,6 +551,7 @@ export default createBackendModule({
           createRunAzurePipelineAction(),
           createCreateAzurePipelineAction(),
           createCreateAzurePipelineForGitHubAction(),
+          createDeleteGitHubRepositoryAction(),
         );
       },
     });
