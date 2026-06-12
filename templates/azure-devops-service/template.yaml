@@ -81,6 +81,16 @@ spec:
         defaultBranch: main
         description: ${{ parameters.description }}
 
+    - id: createPipeline
+      name: Create Azure DevOps Pipeline
+      action: azure:pipeline:create
+      input:
+        organization: ${{ parameters.organization }}
+        project: ${{ parameters.project }}
+        repo: ${{ parameters.name }}
+        pipelineName: ${{ parameters.name }}
+        yamlPath: /azure-pipelines.yml
+
     - id: register
       name: Register in Backstage Catalog
       action: catalog:register
@@ -93,6 +103,8 @@ spec:
         url: ${{ steps.publish.output.remoteUrl }}
       - title: Governance standard
         url: ${{ steps.publish.output.remoteUrl }}?path=/pipelines/standard-deploy.yml
+      - title: Azure DevOps pipeline
+        url: ${{ steps.createPipeline.output.pipelineUrl }}
       - title: Open in catalog
         icon: catalog
         entityRef: ${{ steps.register.output.entityRef }}

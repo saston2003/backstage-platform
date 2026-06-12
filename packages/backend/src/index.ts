@@ -69,11 +69,9 @@ backend.add(import('@backstage/plugin-search-backend-module-techdocs'));
 // kubernetes plugin
 backend.add(import('@backstage/plugin-kubernetes-backend'));
 
-// notifications plugin
+// notifications and signals plugins
 backend.add(import('@backstage/plugin-notifications-backend'));
-
-// signals plugin disabled for local demo stability
-// backend.add(import('@backstage/plugin-signals-backend'));
+backend.add(import('@backstage/plugin-signals-backend'));
 
 // mcp actions plugin
 backend.add(import('@backstage/plugin-mcp-actions-backend'));
