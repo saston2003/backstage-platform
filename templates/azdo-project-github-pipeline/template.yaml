@@ -1,0 +1,172 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: azdo-project-github-pipeline-service
+  title: Create Azure DevOps Project with GitHub Service and Pipeline
+  description: Creates an Azure DevOps project, a GitHub repository, and an Azure DevOps pipeline for that GitHub repository.
+  tags: [azure-devops, github, service, pipeline]
+spec:
+  owner: user:guest
+  type: service
+  parameters:
+    - title: Azure DevOps Project
+      required:
+        - organization
+        - projectName
+      properties:
+        organization:
+          title: Azure DevOps Organization
+          type: string
+          description: dev.azure.com organization name without https.
+          default: sastonz400
+        projectName:
+          title: Project Name
+          type: string
+          description: Azure DevOps project to create or reuse.
+          ui:autofocus: true
+        projectDescription:
+          title: Project Description
+          type: string
+          default: Created from Backstage
+        visibility:
+          title: Visibility
+          type: string
+          default: private
+          enum:
+            - private
+            - public
+          ui:enumNames:
+            - Private
+            - Public
+        processTemplateId:
+          title: Process Template
+          type: string
+          default: adcc42ab-9882-485e-a3ed-7678f01f66bc
+          enum:
+            - adcc42ab-9882-485e-a3ed-7678f01f66bc
+            - 6b724908-ef14-45cf-84f8-768b5384da45
+            - 27450541-8e31-4150-9947-dc59f998fc01
+            - b8a3a93a-1b87-447f-9e0c-5c12f593a80f
+          ui:enumNames:
+            - Agile
+            - Scrum
+            - CMMI
+            - Basic
+    - title: GitHub Service
+      required:
+        - serviceName
+        - serviceDescription
+        - repoOwner
+        - owner
+      properties:
+        serviceName:
+          title: Service Name
+          type: string
+          description: Lowercase kebab-case service name used for the repo, pipeline, and catalog entity.
+          pattern: '^[a-z0-9-]+$'
+        serviceDescription:
+          title: Service Description
+          type: string
+          default: Service created from Backstage and published to GitHub with an Azure DevOps pipeline.
+        repoOwner:
+          title: GitHub Org/User
+          type: string
+          default: saston2003
+        owner:
+          title: Backstage Owner
+          type: string
+          default: guests
+    - title: Pipeline
+      required:
+        - environment
+        - serviceConnectionName
+      properties:
+        environment:
+          title: Environment
+          type: string
+          default: dev
+          enum:
+            - dev
+            - test
+            - prod
+          ui:enumNames:
+            - Development
+            - Test
+            - Production
+        serviceConnectionName:
+          title: GitHub Service Connection Name
+          type: string
+          description: Exact name of an Azure DevOps GitHub service connection in the Azure DevOps project.
+          default: Github
+  steps:
+    - id: createProject
+      name: Create Azure DevOps Project
+      action: azure:project:create
+      input:
+        organization: ${{ parameters.organization }}
+        projectName: ${{ parameters.projectName }}
+        description: ${{ parameters.projectDescription }}
+        visibility: ${{ parameters.visibility }}
+        processTemplateId: ${{ parameters.processTemplateId }}
+        waitForCompletion: true
+
+    - id: fetchBase
+      name: Fetch Starter Code
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.serviceName }}
+          description: ${{ parameters.serviceDescription }}
+          owner: ${{ parameters.owner }}
+          repoOwner: ${{ parameters.repoOwner }}
+          environment: ${{ parameters.environment }}
+          organization: ${{ parameters.organization }}
+          project: ${{ parameters.projectName }}
+
+    - id: publish
+      name: Create GitHub Repo and Push Code
+      action: publish:github
+      input:
+        repoUrl: github.com?owner=${{ parameters.repoOwner }}&repo=${{ parameters.serviceName }}
+        repoVisibility: private
+        defaultBranch: main
+        description: ${{ parameters.serviceDescription }}
+
+    - id: createServiceConnection
+      name: Create Azure DevOps GitHub Service Connection
+      action: azure:github:service-connection:create
+      input:
+        organization: ${{ parameters.organization }}
+        project: ${{ parameters.projectName }}
+        serviceConnectionName: ${{ parameters.serviceConnectionName }}
+
+    - id: createPipeline
+      name: Create Azure DevOps Pipeline
+      action: azure:pipeline:create:github
+      input:
+        organization: ${{ parameters.organization }}
+        project: ${{ parameters.projectName }}
+        repoOwner: ${{ parameters.repoOwner }}
+        repo: ${{ parameters.serviceName }}
+        pipelineName: ${{ parameters.serviceName }}
+        serviceConnectionName: ${{ parameters.serviceConnectionName }}
+        yamlPath: /azure-pipelines.yml
+
+    - id: register
+      name: Register in Backstage Catalog
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: /catalog-info.yaml
+  output:
+    links:
+      - title: Azure DevOps Project
+        url: ${{ steps.createProject.output.projectUrl }}
+      - title: GitHub Repository
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Azure DevOps Pipeline
+        url: ${{ steps.createPipeline.output.pipelineUrl }}
+      - title: Open in Catalog
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}

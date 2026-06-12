@@ -1,0 +1,42 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: github-repository-delete
+  title: Delete GitHub Repository
+  description: Deletes an existing GitHub repository.
+  tags: [github, repository]
+spec:
+  owner: user:guest
+  type: service
+  parameters:
+    - title: GitHub Repository
+      required:
+        - repoOwner
+        - repo
+        - confirmRepositoryName
+      properties:
+        repoOwner:
+          title: GitHub Org/User
+          type: string
+          default: saston2003
+        repo:
+          title: Repository Name
+          type: string
+          description: Repository to delete.
+          ui:autofocus: true
+        confirmRepositoryName:
+          title: Confirm Repository Name
+          type: string
+          description: Type the repository name again to confirm deletion.
+  steps:
+    - id: deleteRepository
+      name: Delete GitHub Repository
+      action: github:repo:delete
+      input:
+        repoOwner: ${{ parameters.repoOwner }}
+        repo: ${{ parameters.repo }}
+        confirmRepositoryName: ${{ parameters.confirmRepositoryName }}
+  output:
+    text:
+      - title: Result
+        content: Deleted ${{ parameters.repoOwner }}/${{ parameters.repo }}

@@ -1,0 +1,11 @@
+parameters:
+  - name: serviceName
+    type: string
+  - name: environment
+    type: string
+  - name: ownerGroup
+    type: string
+
+steps:
+  - script: echo Deploying ${{ parameters.serviceName }} to ${{ parameters.environment }} for ${{ parameters.ownerGroup }}
+    displayName: Deploy service

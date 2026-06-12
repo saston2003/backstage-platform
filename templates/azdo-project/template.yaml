@@ -1,0 +1,68 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: create-azdo-project
+  title: Create Azure DevOps Project
+  description: Creates an Azure DevOps project.
+  tags: [azure-devops, project]
+spec:
+  owner: user:guest
+  type: service
+  parameters:
+    - title: Azure DevOps Project
+      required:
+        - organization
+        - projectName
+      properties:
+        organization:
+          title: Azure DevOps Organization
+          type: string
+          description: dev.azure.com organization name without https.
+          default: sastonz400
+        projectName:
+          title: Project Name
+          type: string
+          description: Azure DevOps project to create or reuse.
+          ui:autofocus: true
+        description:
+          title: Project Description
+          type: string
+          default: Created from Backstage
+        visibility:
+          title: Visibility
+          type: string
+          default: private
+          enum:
+            - private
+            - public
+          ui:enumNames:
+            - Private
+            - Public
+        processTemplateId:
+          title: Process Template
+          type: string
+          default: adcc42ab-9882-485e-a3ed-7678f01f66bc
+          enum:
+            - adcc42ab-9882-485e-a3ed-7678f01f66bc
+            - 6b724908-ef14-45cf-84f8-768b5384da45
+            - 27450541-8e31-4150-9947-dc59f998fc01
+            - b8a3a93a-1b87-447f-9e0c-5c12f593a80f
+          ui:enumNames:
+            - Agile
+            - Scrum
+            - CMMI
+            - Basic
+  steps:
+    - id: createProject
+      name: Create Azure DevOps Project
+      action: azure:project:create
+      input:
+        organization: ${{ parameters.organization }}
+        projectName: ${{ parameters.projectName }}
+        description: ${{ parameters.description }}
+        visibility: ${{ parameters.visibility }}
+        processTemplateId: ${{ parameters.processTemplateId }}
+  output:
+    links:
+      - title: Open Azure DevOps Project
+        url: ${{ steps.createProject.output.projectUrl }}
