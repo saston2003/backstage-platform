@@ -3,7 +3,7 @@ kind: Template
 metadata:
   name: github-service
   title: Create GitHub Service
-  description: Create a new GitHub repository and register it
+  description: Creates a repo in GitHub
 
 spec:
   owner: platform-team
@@ -15,9 +15,12 @@ spec:
         - name
       properties:
         name:
-          title: Repository Name
+          title: Service Name
           type: string
-          description: e.g. app-orders-api
+        repoOwner:
+          title: GitHub Org/User
+          type: string
+          default: saston2003
 
   steps:
     - id: fetch
@@ -30,14 +33,16 @@ spec:
           owner: platform-team
 
     - id: publish
-      name: Create GitHub Repo
+      name: Create GitHub repo
       action: publish:github
       input:
-        repoUrl: github.com?owner=saston2003&repo=${{ parameters.name }}
+        description: Service created via Backstage
+        repoVisibility: private
+        repoUrl: github.com?owner=${{ parameters.repoOwner }}&repo=${{ parameters.name }}
         defaultBranch: main
 
     - id: register
-      name: Register in Backstage
+      name: Register in catalog
       action: catalog:register
       input:
         repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
