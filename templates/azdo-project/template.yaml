@@ -3,13 +3,13 @@ kind: Template
 metadata:
   name: create-azdo-project
   title: Create Azure DevOps Project
-  description: Creates an Azure DevOps project.
+  description: Creates a new Azure DevOps project.
   tags: [azure-devops, project]
 spec:
   owner: user:guest
   type: service
   parameters:
-    - title: Azure DevOps Project
+    - title: Project Details
       required:
         - organization
         - projectName
@@ -22,10 +22,10 @@ spec:
         projectName:
           title: Project Name
           type: string
-          description: Azure DevOps project to create or reuse.
+          description: Name of the Azure DevOps project to create.
           ui:autofocus: true
         description:
-          title: Project Description
+          title: Description
           type: string
           default: Created from Backstage
         visibility:
@@ -41,6 +41,7 @@ spec:
         processTemplateId:
           title: Process Template
           type: string
+          description: Azure DevOps process template to use for the project.
           default: adcc42ab-9882-485e-a3ed-7678f01f66bc
           enum:
             - adcc42ab-9882-485e-a3ed-7678f01f66bc
@@ -64,5 +65,5 @@ spec:
         processTemplateId: ${{ parameters.processTemplateId }}
   output:
     links:
-      - title: Open Azure DevOps Project
+      - title: View Azure DevOps Project
         url: ${{ steps.createProject.output.projectUrl }}

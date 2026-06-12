@@ -3,31 +3,33 @@ kind: Template
 metadata:
   name: github-repository-delete
   title: Delete GitHub Repository
-  description: Deletes an existing GitHub repository.
-  tags: [github, repository]
+  description: Deletes an existing GitHub repository using the Backstage GITHUB_TOKEN, which must have repository deletion permission.
+  tags: [github, repository, delete]
 spec:
   owner: user:guest
   type: service
   parameters:
-    - title: GitHub Repository
+    - title: Repository To Delete
       required:
         - repoOwner
         - repo
-        - confirmRepositoryName
+        - confirmRepoName
       properties:
         repoOwner:
           title: GitHub Org/User
           type: string
+          description: GitHub organization or user that owns the repository.
           default: saston2003
         repo:
           title: Repository Name
           type: string
-          description: Repository to delete.
+          description: Repository name to delete.
+          pattern: '^[A-Za-z0-9_.-]+$'
           ui:autofocus: true
-        confirmRepositoryName:
+        confirmRepoName:
           title: Confirm Repository Name
           type: string
-          description: Type the repository name again to confirm deletion.
+          description: Type the repository name again to confirm deletion. Backstage must be using a GitHub token with delete_repo or repository administration permission.
   steps:
     - id: deleteRepository
       name: Delete GitHub Repository
@@ -35,8 +37,8 @@ spec:
       input:
         repoOwner: ${{ parameters.repoOwner }}
         repo: ${{ parameters.repo }}
-        confirmRepositoryName: ${{ parameters.confirmRepositoryName }}
+        confirmRepoName: ${{ parameters.confirmRepoName }}
   output:
     text:
-      - title: Result
-        content: Deleted ${{ parameters.repoOwner }}/${{ parameters.repo }}
+      - title: Repository deleted
+        content: Deleted ${{ parameters.repoOwner }}/${{ parameters.repo }} from GitHub.

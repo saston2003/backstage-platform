@@ -112,27 +112,20 @@ auth:
   # to learn more about client id metadata documents
   experimentalClientIdMetadataDocuments:
     enabled: false
-    # Optional: restrict which `client_id` URLs are allowed (defaults to ['*'])
     # allowedClientIdPatterns:
     #   - 'https://example.com/*'
     #   - 'https://*.trusted-domain.com/*'
     # Optional: restrict which redirect URIs are allowed (defaults to ['*'])
     # allowedRedirectUriPatterns:
-    #   - 'http://localhost:*'
-    #   - 'https://*.example.com/*'
 
 scaffolder:
   # see https://backstage.io/docs/features/software-templates/configuration for software template options
+  pullRequestBranchName: backstage-integration
 
 catalog:
-  import:
-    entityFilename: catalog-info.yaml
-    pullRequestBranchName: backstage-integration
-
   rules:
     - allow: [Component, System, API, Resource, Location, Template, User, Group]
 
-  providers:
     # Azure DevOps discovery provider currently disabled because Azure Search API returns 203.
     # Re-enable once PAT has required scope for code search/list access.
     # azureDevOps:
@@ -160,6 +153,11 @@ catalog:
 
     - type: file
       target: ../../templates/github-repository-delete/template.yaml
+      rules:
+        - allow: [Template]
+
+    - type: file
+      target: ../../templates/github-azure-pipeline-service/template.yaml
       rules:
         - allow: [Template]
 

@@ -139,18 +139,34 @@ const createDeleteGitHubRepositoryAction = () =>
     description: 'Deletes a GitHub repository',
     schema: {
       input: {
+        owner: z =>
+          z
+            .string({
+              description: 'GitHub organization or user that owns the repository',
+            })
+            .optional(),
         repoOwner: z =>
-          z.string({
-            description: 'GitHub organization or user that owns the repository',
-          }),
+          z
+            .string({
+              description: 'GitHub organization or user that owns the repository',
+            })
+            .optional(),
         repo: z =>
           z.string({
             description: 'GitHub repository name',
           }),
+        confirmRepoName: z =>
+          z
+            .string({
+              description: 'Repository name confirmation',
+            })
+            .optional(),
         confirmRepositoryName: z =>
-          z.string({
-            description: 'Repository name confirmation',
-          }),
+          z
+            .string({
+              description: 'Repository name confirmation',
+            })
+            .optional(),
       },
       output: {
         deleted: z => z.boolean().describe('Whether the repository was deleted'),
@@ -158,20 +174,26 @@ const createDeleteGitHubRepositoryAction = () =>
       },
     },
     async handler(ctx) {
-      const { repoOwner, repo, confirmRepositoryName } = ctx.input;
-      if (confirmRepositoryName !== repo) {
+      const { owner, repoOwner, repo, confirmRepoName, confirmRepositoryName } = ctx.input;
+      const repositoryOwner = repoOwner ?? owner;
+      const repositoryConfirmation = confirmRepositoryName ?? confirmRepoName;
+
+      if (!repositoryOwner) {
+        throw new Error('GitHub repository owner is required');
+      }
+      if (repositoryConfirmation !== repo) {
         throw new Error('Repository confirmation does not match the repository name');
       }
 
       const repositoryUrl = `https://github.com/${encodeURIComponent(
-        repoOwner,
+        repositoryOwner,
       )}/${encodeURIComponent(repo)}`;
 
-      ctx.logger.info(`Deleting GitHub repository ${repoOwner}/${repo}`);
+      ctx.logger.info(`Deleting GitHub repository ${repositoryOwner}/${repo}`);
 
       const response = await fetch(
         `https://api.github.com/repos/${encodeURIComponent(
-          repoOwner,
+          repositoryOwner,
         )}/${encodeURIComponent(repo)}`,
         {
           method: 'DELETE',
@@ -185,7 +207,7 @@ const createDeleteGitHubRepositoryAction = () =>
 
       const responseText = await response.text();
       if (response.status === 404) {
-        throw new Error(`GitHub repository was not found: ${repoOwner}/${repo}`);
+        throw new Error(`GitHub repository was not found: ${repositoryOwner}/${repo}`);
       }
       if (!response.ok) {
         throw new Error(
@@ -195,7 +217,7 @@ const createDeleteGitHubRepositoryAction = () =>
 
       ctx.output('deleted', true);
       ctx.output('repositoryUrl', repositoryUrl);
-      ctx.logger.info(`Deleted GitHub repository ${repoOwner}/${repo}`);
+      ctx.logger.info(`Deleted GitHub repository ${repositoryOwner}/${repo}`);
     },
   });
 

@@ -1,0 +1,122 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: github-azure-pipeline-service
+  title: Create GitHub Service with Azure Pipeline
+  description: Creates a GitHub repo and an Azure DevOps pipeline for it.
+  tags: [github, azure-devops, service, pipeline]
+spec:
+  owner: user:guest
+  type: service
+  parameters:
+    - title: Service Details
+      required:
+        - name
+        - description
+      properties:
+        name:
+          title: Service Name
+          type: string
+          description: Lowercase kebab-case service name used for the repo, pipeline, and catalog entity.
+          pattern: '^[a-z0-9-]+$'
+          ui:autofocus: true
+        description:
+          title: Description
+          type: string
+          default: Service created from Backstage and published to GitHub with an Azure DevOps pipeline.
+        owner:
+          title: Owner
+          type: string
+          description: Backstage group that owns the service.
+          default: guests
+        repoOwner:
+          title: GitHub Org/User
+          type: string
+          default: saston2003
+    - title: Governance Controls
+      required:
+        - environment
+      properties:
+        environment:
+          title: Environment
+          type: string
+          description: Deployment environment allowed by the platform standard pipeline.
+          default: dev
+          enum:
+            - dev
+            - test
+            - prod
+          ui:enumNames:
+            - Development
+            - Test
+            - Production
+    - title: Azure DevOps Pipeline Target
+      required:
+        - organization
+        - project
+        - serviceConnectionName
+      properties:
+        organization:
+          title: Organization
+          type: string
+          default: sastonz400
+        project:
+          title: Project
+          type: string
+          default: Agile Planning and Portfolio Management with Azure Boards
+        serviceConnectionName:
+          title: GitHub Service Connection Name
+          type: string
+          description: Exact name of an Azure DevOps GitHub service connection from Project settings > Service connections, not an Azure Repos repository.
+          default: Github
+  steps:
+    - id: fetchBase
+      name: Fetch Starter Code
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.name }}
+          description: ${{ parameters.description }}
+          owner: ${{ parameters.owner }}
+          repoOwner: ${{ parameters.repoOwner }}
+          environment: ${{ parameters.environment }}
+          organization: ${{ parameters.organization }}
+          project: ${{ parameters.project }}
+
+    - id: publish
+      name: Create GitHub Repo and Push Code
+      action: publish:github
+      input:
+        repoUrl: github.com?owner=${{ parameters.repoOwner }}&repo=${{ parameters.name }}
+        repoVisibility: private
+        defaultBranch: main
+        description: ${{ parameters.description }}
+
+    - id: createPipeline
+      name: Create Azure DevOps Pipeline
+      action: azure:pipeline:create:github
+      input:
+        organization: ${{ parameters.organization }}
+        project: ${{ parameters.project }}
+        repoOwner: ${{ parameters.repoOwner }}
+        repo: ${{ parameters.name }}
+        pipelineName: ${{ parameters.name }}
+        serviceConnectionName: ${{ parameters.serviceConnectionName }}
+        yamlPath: /azure-pipelines.yml
+
+    - id: register
+      name: Register in Backstage Catalog
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: /catalog-info.yaml
+  output:
+    links:
+      - title: GitHub Repository
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Azure DevOps pipeline
+        url: ${{ steps.createPipeline.output.pipelineUrl }}
+      - title: Open in catalog
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}
