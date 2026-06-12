@@ -1,0 +1,27 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{ values.name }}
+  description: ${{ values.description }}
+  tags: [github, azure-devops, service]
+  annotations:
+    backstage.io/source-location: url:https://github.com/${{ values.repoOwner }}/${{ values.name }}
+    github.com/project-slug: ${{ values.repoOwner }}/${{ values.name }}
+    dev.azure.com/host-org: dev.azure.com/${{ values.organization }}
+    dev.azure.com/project: ${{ values.project }}
+    dev.azure.com/build-definition: ${{ values.name }}
+    platform.example.com/environment: ${{ values.environment }}
+    platform.example.com/governance-standard: github-azure-pipeline-service-v1
+  links:
+    - title: GitHub Repo
+      url: https://github.com/${{ values.repoOwner }}/${{ values.name }}
+    - title: Azure Boards
+      url: https://dev.azure.com/${{ values.organization }}/${{ values.project }}/_boards
+    - title: Azure Pipelines
+      url: https://dev.azure.com/${{ values.organization }}/${{ values.project }}/_build
+    - title: Platform standard deploy template
+      url: https://github.com/${{ values.repoOwner }}/${{ values.name }}/blob/main/pipelines/standard-deploy.yml
+spec:
+  type: service
+  lifecycle: experimental
+  owner: ${{ values.owner }}
