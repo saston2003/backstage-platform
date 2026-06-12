@@ -260,6 +260,211 @@ const createCreateAzurePipelineAction = () =>
     },
   });
 
+const findAzureDevOpsServiceConnection = async (
+  organization: string,
+  project: string,
+  serviceConnectionName: string,
+  authorization: string,
+) => {
+  const serviceConnectionsResponse = await fetch(
+    azureDevOpsApiUrl(
+      organization,
+      project,
+      `/_apis/serviceendpoint/endpoints?type=github&api-version=7.1-preview.4`,
+    ),
+    {
+      headers: { Authorization: authorization },
+    },
+  );
+  const serviceConnectionsText = await serviceConnectionsResponse.text();
+  if (!serviceConnectionsResponse.ok) {
+    throw new Error(
+      `Azure DevOps service connection lookup failed with ${serviceConnectionsResponse.status}: ${serviceConnectionsText.slice(0, 500)}`,
+    );
+  }
+
+  const serviceConnections = JSON.parse(serviceConnectionsText) as {
+    value?: Array<{ id: string; name: string }>;
+  };
+  const expectedServiceConnectionName = serviceConnectionName.trim();
+  const serviceConnection = serviceConnections.value?.find(
+    endpoint =>
+      endpoint.name.localeCompare(expectedServiceConnectionName, undefined, {
+        sensitivity: 'accent',
+      }) === 0,
+  );
+
+  if (!serviceConnection) {
+    const availableServiceConnectionNames = serviceConnections.value
+      ?.map(endpoint => endpoint.name)
+      .filter(Boolean)
+      .sort();
+    const availableServiceConnections = availableServiceConnectionNames?.length
+      ? availableServiceConnectionNames.join(', ')
+      : 'none found';
+    throw new Error(
+      `Azure DevOps GitHub service connection '${expectedServiceConnectionName}' was not found in ${organization}/${project}. Available GitHub service connections: ${availableServiceConnections}. Create one from Project settings > Service connections > New service connection > GitHub, then use its exact name here.`,
+    );
+  }
+
+  return serviceConnection;
+};
+
+const createCreateAzurePipelineForGitHubAction = () =>
+  createTemplateAction({
+    id: 'azure:pipeline:create:github',
+    description: 'Creates an Azure DevOps YAML pipeline for a GitHub repository',
+    schema: {
+      input: {
+        organization: z =>
+          z.string({
+            description: 'Azure DevOps organization name',
+          }),
+        project: z =>
+          z.string({
+            description: 'Azure DevOps project name',
+          }),
+        repoOwner: z =>
+          z.string({
+            description: 'GitHub organization or user that owns the repository',
+          }),
+        repo: z =>
+          z.string({
+            description: 'GitHub repository name',
+          }),
+        pipelineName: z =>
+          z.string({
+            description: 'Azure DevOps pipeline name',
+          }),
+        serviceConnectionName: z =>
+          z
+            .string({
+              description: 'Azure DevOps GitHub service connection name',
+            })
+            .default('GitHub'),
+        yamlPath: z =>
+          z
+            .string({
+              description: 'Path to the Azure Pipelines YAML file in the repository',
+            })
+            .default('/azure-pipelines.yml'),
+      },
+      output: {
+        pipelineId: z => z.number().describe('Azure DevOps pipeline ID'),
+        pipelineUrl: z => z.string().describe('Azure DevOps pipeline URL'),
+      },
+    },
+    async handler(ctx) {
+      const {
+        organization,
+        project,
+        repoOwner,
+        repo,
+        pipelineName,
+        serviceConnectionName,
+        yamlPath,
+      } = ctx.input;
+      const authorization = azureDevOpsAuthHeader();
+      const githubRepository = `${repoOwner}/${repo}`;
+
+      ctx.logger.info(
+        `Creating Azure DevOps pipeline ${pipelineName} for GitHub repository ${githubRepository}`,
+      );
+
+      const serviceConnection = await findAzureDevOpsServiceConnection(
+        organization,
+        project,
+        serviceConnectionName,
+        authorization,
+      );
+
+      const existingPipelinesResponse = await fetch(
+        azureDevOpsApiUrl(
+          organization,
+          project,
+          `/_apis/pipelines?api-version=7.1-preview.1`,
+        ),
+        {
+          headers: { Authorization: authorization },
+        },
+      );
+      const existingPipelinesText = await existingPipelinesResponse.text();
+      if (!existingPipelinesResponse.ok) {
+        throw new Error(
+          `Azure DevOps pipeline lookup failed with ${existingPipelinesResponse.status}: ${existingPipelinesText.slice(0, 500)}`,
+        );
+      }
+
+      const existingPipelines = JSON.parse(existingPipelinesText) as {
+        value?: Array<{ id: number; name: string; _links?: { web?: { href?: string } } }>;
+      };
+      const existingPipeline = existingPipelines.value?.find(
+        pipeline => pipeline.name === pipelineName,
+      );
+      if (existingPipeline) {
+        const pipelineUrl =
+          existingPipeline._links?.web?.href ??
+          `https://dev.azure.com/${encodeURIComponent(
+            organization,
+          )}/${encodeURIComponent(project)}/_build?definitionId=${existingPipeline.id}`;
+        ctx.output('pipelineId', existingPipeline.id);
+        ctx.output('pipelineUrl', pipelineUrl);
+        ctx.logger.info(`Azure DevOps pipeline already exists as ${existingPipeline.id}`);
+        return;
+      }
+
+      const createPipelineResponse = await fetch(
+        azureDevOpsApiUrl(
+          organization,
+          project,
+          `/_apis/pipelines?api-version=7.1-preview.1`,
+        ),
+        {
+          method: 'POST',
+          headers: {
+            Authorization: authorization,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: pipelineName,
+            configuration: {
+              type: 'yaml',
+              path: yamlPath,
+              repository: {
+                id: githubRepository,
+                name: githubRepository,
+                type: 'github',
+                connection: {
+                  id: serviceConnection.id,
+                },
+              },
+            },
+          }),
+        },
+      );
+      const createPipelineText = await createPipelineResponse.text();
+      if (!createPipelineResponse.ok) {
+        throw new Error(
+          `Azure DevOps GitHub pipeline creation failed with ${createPipelineResponse.status}: ${createPipelineText.slice(0, 500)}`,
+        );
+      }
+
+      const pipeline = JSON.parse(createPipelineText) as {
+        id: number;
+        _links?: { web?: { href?: string } };
+      };
+      const pipelineUrl =
+        pipeline._links?.web?.href ??
+        `https://dev.azure.com/${encodeURIComponent(
+          organization,
+        )}/${encodeURIComponent(project)}/_build?definitionId=${pipeline.id}`;
+
+      ctx.output('pipelineId', pipeline.id);
+      ctx.output('pipelineUrl', pipelineUrl);
+      ctx.logger.info(`Created Azure DevOps GitHub pipeline ${pipeline.id}`);
+    },
+  });
+
 export default createBackendModule({
   pluginId: 'scaffolder',
   moduleId: 'azure-pipeline-runner',
@@ -272,6 +477,7 @@ export default createBackendModule({
         scaffolder.addActions(
           createRunAzurePipelineAction(),
           createCreateAzurePipelineAction(),
+          createCreateAzurePipelineForGitHubAction(),
         );
       },
     });

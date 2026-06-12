@@ -149,6 +149,11 @@ catalog:
 
   locations:
     - type: file
+      target: ../../templates/github-azure-pipeline-service/template.yaml
+      rules:
+        - allow: [Template]
+
+    - type: file
       target: ../../templates/github-service/template.yaml
       rules:
         - allow: [Template]
