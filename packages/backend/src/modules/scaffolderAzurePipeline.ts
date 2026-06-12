@@ -112,6 +112,127 @@ const azureDevOpsApiUrl = (
     project,
   )}${path}`;
 
+const azureDevOpsOrganizationApiUrl = (organization: string, path: string) =>
+  `https://dev.azure.com/${encodeURIComponent(organization)}${path}`;
+
+const createCreateAzureProjectAction = () =>
+  createTemplateAction({
+    id: 'azure:project:create',
+    description: 'Creates an Azure DevOps project',
+    schema: {
+      input: {
+        organization: z =>
+          z.string({
+            description: 'Azure DevOps organization name',
+          }),
+        projectName: z =>
+          z.string({
+            description: 'Azure DevOps project name',
+          }),
+        description: z =>
+          z
+            .string({
+              description: 'Azure DevOps project description',
+            })
+            .default('Created from Backstage'),
+        visibility: z =>
+          z
+            .enum(['private', 'public'], {
+              description: 'Azure DevOps project visibility',
+            })
+            .default('private'),
+        processTemplateId: z =>
+          z
+            .string({
+              description: 'Azure DevOps process template ID',
+            })
+            .default('adcc42ab-9882-485e-a3ed-7678f01f66bc'),
+      },
+      output: {
+        projectUrl: z => z.string().describe('Azure DevOps project URL'),
+        operationUrl: z =>
+          z.string().optional().describe('Azure DevOps project creation operation URL'),
+        created: z => z.boolean().describe('Whether the project was created'),
+      },
+    },
+    async handler(ctx) {
+      const {
+        organization,
+        projectName,
+        description,
+        visibility,
+        processTemplateId,
+      } = ctx.input;
+      const authorization = azureDevOpsAuthHeader();
+      const projectUrl = `https://dev.azure.com/${encodeURIComponent(
+        organization,
+      )}/${encodeURIComponent(projectName)}`;
+
+      ctx.logger.info(`Creating Azure DevOps project ${organization}/${projectName}`);
+
+      const existingProjectResponse = await fetch(
+        azureDevOpsOrganizationApiUrl(
+          organization,
+          `/_apis/projects/${encodeURIComponent(projectName)}?api-version=7.1-preview.4`,
+        ),
+        {
+          headers: { Authorization: authorization },
+        },
+      );
+      const existingProjectText = await existingProjectResponse.text();
+      if (existingProjectResponse.ok) {
+        ctx.output('projectUrl', projectUrl);
+        ctx.output('created', false);
+        ctx.logger.info(`Azure DevOps project already exists: ${projectName}`);
+        return;
+      }
+      if (existingProjectResponse.status !== 404) {
+        throw new Error(
+          `Azure DevOps project lookup failed with ${existingProjectResponse.status}: ${existingProjectText.slice(0, 500)}`,
+        );
+      }
+
+      const createProjectResponse = await fetch(
+        azureDevOpsOrganizationApiUrl(
+          organization,
+          `/_apis/projects?api-version=7.1-preview.4`,
+        ),
+        {
+          method: 'POST',
+          headers: {
+            Authorization: authorization,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: projectName,
+            description,
+            visibility,
+            capabilities: {
+              versioncontrol: {
+                sourceControlType: 'Git',
+              },
+              processTemplate: {
+                templateTypeId: processTemplateId,
+              },
+            },
+          }),
+        },
+      );
+      const createProjectText = await createProjectResponse.text();
+      if (!createProjectResponse.ok) {
+        throw new Error(
+          `Azure DevOps project creation failed with ${createProjectResponse.status}: ${createProjectText.slice(0, 500)}`,
+        );
+      }
+
+      const operation = JSON.parse(createProjectText) as { url?: string };
+      ctx.output('projectUrl', projectUrl);
+      ctx.output('operationUrl', operation.url);
+      ctx.output('created', true);
+      ctx.logger.info(`Queued Azure DevOps project creation for ${projectName}`);
+    },
+  });
+
 const createCreateAzurePipelineAction = () =>
   createTemplateAction({
     id: 'azure:pipeline:create',
@@ -549,6 +670,7 @@ export default createBackendModule({
       async init({ scaffolder }) {
         scaffolder.addActions(
           createRunAzurePipelineAction(),
+          createCreateAzureProjectAction(),
           createCreateAzurePipelineAction(),
           createCreateAzurePipelineForGitHubAction(),
           createDeleteGitHubRepositoryAction(),
